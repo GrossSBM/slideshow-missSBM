@@ -250,11 +250,12 @@ $$J(\theta, \psi) = \log p_\theta(\mathbf{Y}) - KL[q_\psi (\mathbf{Z}) ||  p_\th
 
   - M step: update $\theta^h = \{ \boldsymbol\alpha^h, \boldsymbol\Pi^h\}$
 
+$$\theta^h = \arg\max J(\theta, \psi^h) = \arg\max_{\theta} \mathbb{E}_{q_{\psi^h}} [\log p_{\theta}(\mathbf{Y}, \mathbf{Z})]$$
+
   - VE step: find the optimal $q_\psi$, by updating $\psi^h= (\psi^h_{i})_i = \mathbf{T}^{h} = \mathbb{E}_{q^{h}} (\mathbf{Z})$:
 
 $$\psi^h = \arg \max J(\theta^h, \psi) = \arg\min_{\psi} KL[q_\psi(\mathbf{Z}) \,||\, p_{\theta^h}(\mathbf{Z}\,|\,\mathbf{Y})]$$
 
-$$\theta^h = \arg\max J(\theta, \psi^h) = \arg\max_{\theta} \mathbb{E}_{q_{\psi^h}} [\log p_{\theta}(\mathbf{Y}, \mathbf{Z})]$$
 
 ---
 

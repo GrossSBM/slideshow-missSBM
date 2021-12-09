@@ -112,10 +112,6 @@ class: inverse, middle
 
 ### Recommandation system: Epinion 
 
-
-English (US) 
-Farmers only provide information about other farmers with whom they have interacted.
-
 Who-trust-whom online social network of a general consumer review site Epinions.com. Members of the site can decide whether to ''trust'' each other. 
 
 **Available** at http://www.trustlet.org/datasets/extended_epinions/user_rating.txt.gz

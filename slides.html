@@ -88,10 +88,6 @@ class: inverse, middle
 
 ### Recommandation system: Epinion 
 
-
-English (US) 
-Farmers only provide information about other farmers with whom they have interacted.
-
 Who-trust-whom online social network of a general consumer review site Epinions.com. Members of the site can decide whether to ''trust'' each other. 
 
 **Available** at http://www.trustlet.org/datasets/extended_epinions/user_rating.txt.gz
@@ -347,11 +343,12 @@ Maximize the ELBO (Evidence Lower BOund):
 
   - M step: update `\(\theta^h = \{ \boldsymbol\alpha^h, \boldsymbol\Pi^h\}\)`
 
+`$$\theta^h = \arg\max J(\theta, \psi^h) = \arg\max_{\theta} \mathbb{E}_{q_{\psi^h}} [\log p_{\theta}(\mathbf{Y}, \mathbf{Z})]$$`
+
   - VE step: find the optimal `\(q_\psi\)`, by updating `\(\psi^h= (\psi^h_{i})_i = \mathbf{T}^{h} = \mathbb{E}_{q^{h}} (\mathbf{Z})\)`:
 
 `$$\psi^h = \arg \max J(\theta^h, \psi) = \arg\min_{\psi} KL[q_\psi(\mathbf{Z}) \,||\, p_{\theta^h}(\mathbf{Z}\,|\,\mathbf{Y})]$$`
 
-`$$\theta^h = \arg\max J(\theta, \psi^h) = \arg\max_{\theta} \mathbb{E}_{q_{\psi^h}} [\log p_{\theta}(\mathbf{Y}, \mathbf{Z})]$$`
 
 ---
 
@@ -398,24 +395,24 @@ sbm_full &lt;- estimateMissSBM(blog, blocks, "node")
 ## 
 ##  Initialization of 18 model(s). 
 ##  Performing VEM inference
-##  	Model with 6 blocks.
- 	Model with 8 blocks.
+##  	Model with 8 blocks.
  	Model with 3 blocks.
- 	Model with 13 blocks.
- 	Model with 2 blocks.
- 	Model with 10 blocks.
- 	Model with 15 blocks.
- 	Model with 16 blocks.
- 	Model with 7 blocks.
- 	Model with 12 blocks.
- 	Model with 4 blocks.
- 	Model with 17 blocks.
  	Model with 1 blocks.
- 	Model with 5 blocks.
+ 	Model with 17 blocks.
  	Model with 14 blocks.
+ 	Model with 5 blocks.
+ 	Model with 2 blocks.
  	Model with 11 blocks.
  	Model with 18 blocks.
+ 	Model with 13 blocks.
+ 	Model with 16 blocks.
+ 	Model with 6 blocks.
+ 	Model with 10 blocks.
+ 	Model with 15 blocks.
+ 	Model with 7 blocks.
+ 	Model with 12 blocks.
  	Model with 9 blocks.
+ 	Model with 4 blocks.
 ##  Looking for better solutions
 ##  Pass 1   Going forward +++++++++++++++++
                                                                                                     
@@ -489,7 +486,7 @@ aricode::ARI(sbm_full$bestModel$fittedSBM$memberships, party)
 ```
 
 ```
-## [1] 0.4517304
+## [1] 0.463709
 ```
 
 ```r
@@ -497,7 +494,7 @@ aricode::NID(sbm_full$bestModel$fittedSBM$memberships, party)
 ```
 
 ```
-## [1] 0.3905426
+## [1] 0.3920363
 ```
 
 
@@ -978,7 +975,7 @@ ARI(party, sbm_full$bestModel$fittedSBM$memberships)
 ```
 
 ```
-## [1] 0.4517304
+## [1] 0.463709
 ```
 
 ```r
@@ -986,7 +983,7 @@ ARI(party, sbm_mar$bestModel$fittedSBM$memberships)
 ```
 
 ```
-## [1] 0.3501788
+## [1] 0.4169295
 ```
 
 ```r
@@ -994,7 +991,7 @@ ARI(party, sbm_mnar$bestModel$fittedSBM$memberships)
 ```
 
 ```
-## [1] 0.4550551
+## [1] 0.5040523
 ```
 
 ```r
@@ -1002,7 +999,7 @@ ARI(sbm_mnar$bestModel$fittedSBM$memberships, sbm_full$bestModel$fittedSBM$membe
 ```
 
 ```
-## [1] 0.7758579
+## [1] 0.7266251
 ```
 
 ```r
@@ -1010,7 +1007,7 @@ ARI(sbm_mnar$bestModel$fittedSBM$memberships, sbm_mar$bestModel$fittedSBM$member
 ```
 
 ```
-## [1] 0.4766329
+## [1] 0.5840606
 ```
 &lt;/small&gt;
 
