@@ -1,0 +1,344 @@
+
+---
+
+# Stochastic Block Model
+
+.large[A popular probabilistic model for network data]
+
+.pull-left[
+```{tikz sbm-model, fig.cap = "The binary SBM model", fig.ext = 'png', cache=TRUE, echo = FALSE}
+\usetikzlibrary{calc,shapes,backgrounds,arrows,automata,shadows,positioning}
+\definecolor{myorange}{HTML}{FAB20A}
+\definecolor{myblue}{HTML}{0000FF}
+\definecolor{mygreen}{HTML}{008000}
+
+\begin{tikzpicture}
+  %% UN GRAPH
+
+  \tikzstyle{every edge}=[-,>=stealth',shorten >=1pt,auto,thin,draw]
+  \tikzstyle{every state}=[draw=none,text=white,scale=0.65, font=\scriptsize, transform shape]
+  \tikzstyle{every node}=[fill=myorange]
+  % premier cluster
+  \node[state] (A1) at (0,0.5) {1};
+  \node[state] (A2) at (1,0.5) {2};
+  \node[state] (A3) at (.5,1.5) {3};
+
+  \path (A2) edge [bend left] node[fill=white,below=.1cm]
+  {$\pi_{\color{myorange}{\bullet}\color{myorange}{\bullet}}$}
+  (A1)
+  (A1) edge [bend left] (A3)
+  (A3) edge [bend left] (A2);
+
+  \tikzstyle{every node}=[fill=myblue]
+  \foreach \angle/\text in {234/6, 162/7, 90/8, 18/9, -54/10} {
+    \node[fill=blue,state,xshift=5cm,yshift=3.5cm]     (\text)    at
+    (\angle:1cm) {\text};
+  }
+  \path (7) edge (10)
+  (6) edge (9);
+  \foreach \from/\to in {6/7,7/8,9/10,10/6}{
+    \path (\from) edge [bend left] (\to);
+  }
+
+  \path    (8)    edge     [bend    left]    node[fill=white]
+  {$\pi_{\color{myblue}{\bullet}\color{myblue}{\bullet}}$}  (9) ;
+  
+  \tikzstyle{every node}=[fill=mygreen]
+  % troisieme cluster
+  \node[state] (C1) at (3,-.5) {4};
+  \node[state] (C2) at (4,0) {5};
+
+  \path (C1) edge [bend right] node[fill=white,below=.25cm]
+  {$\pi_{\color{mygreen}{\bullet}\color{mygreen}{\bullet}}$}
+  (C2);
+
+  % inter cluster
+  \path (A3) edge [bend right]  (7)
+  (A3)    edge    [bend    left]    node[fill=white]
+  {$\pi_{\color{myorange}{\bullet}\color{myblue}{\bullet}}$}
+  (8)
+  (C2) edge [bend right] node[fill=white,right]
+  {$\pi_{\color{myblue}{\bullet}\color{mygreen}{\bullet}}$}
+  (9)
+  (A2) edge [bend right] node[fill=white]
+  {$\pi_{\color{myorange}{\bullet}\color{mygreen}{\bullet}}$}
+  (C1);
+\end{tikzpicture}
+```
+]
+
+.pull-right[
+.content-box-purple[
+Let 
+
+- *Fixed* nodes $\{1, \dots, n \}$
+- Unknown colors in $\mathcal{C}=\{\color{#fab20a}{\bullet},\color{#0000ff}{\bullet},\color{#008000}{\bullet}\}$
+- $\alpha_\bullet  =  \mathbb{P}(i  \in  \bullet)$, $\bullet\in\mathcal{C}$
+- $\pi_{\color{#fab20a}{\bullet}\color{#0000ff}{\bullet}} = \mathbb{P}(i \leftrightarrow j | i\in\color{#fab20a}{\bullet},j\in\color{#0000ff}{\bullet})$
+
+In other words, 
+
+\begin{align*}
+Z_i = \mathbf{1}_{\{i \in \bullet\}}  \ & \sim^{\text{iid}} \mathcal{M}(1,\alpha), \\ 
+Y_{ij} \ | \ \{i\in\color{#fab20a}{\bullet},j\in\color{#0000ff}{\bullet}\}
+& \sim^{\text{ind}} \mathcal{B}(\pi_{\color{#fab20a}{\bullet}\color{#0000ff}{\bullet}})\\
+\end{align*}
+]
+]
+
+<small>
+
+```{r ref-sbm, results='asis', echo=FALSE}
+cat("- "); print(myBib["frank1982cluster"])
+cat("- "); print(myBib["holland1983stochastic"])
+```
+
+</small>
+---
+
+# Examples of topology: .small[Community network]
+
+
+```{r sample-sbm-community}
+pi <- matrix(c(0.3,0.02,0.02,0.02,0.3,0.02,0.02,0.02,0.3),3,3)
+communities <- igraph::sample_sbm(100, pi, c(25, 50, 25))
+plot(communities, vertex.label=NA, vertex.color = rep(1:3,c(25, 50, 25)))
+```
+
+---
+
+# Examples of topology: .small[Star network]
+
+```{r sample-sbm-star}
+pi <- matrix(c(0.05,0.3,0.3,0),2,2)
+star <- igraph::sample_sbm(100, pi, c(4, 96))
+plot(star, vertex.label=NA, vertex.color = rep(1:2,c(4,96)))
+```
+
+
+---
+# Estimation in the SBM: .small[latent variable model]
+
+.pull-left[
+.pull-left[
+```{tikz sbm-inference, out.width='80%', fig.ext = 'png', cache=TRUE, echo = FALSE}
+\usetikzlibrary{calc,shapes,backgrounds,arrows,automata,shadows,positioning}
+\begin{tikzpicture}
+  %% UN GRAPH
+
+  \tikzstyle{every edge}=[-,>=stealth',shorten >=1pt,auto,thin,draw]
+  \tikzstyle{every state}=[draw=none,text=white,scale=0.65, font=\scriptsize, transform shape]
+  \tikzstyle{every node}=[fill=lightgray]
+  % premier cluster
+  \node[state] (A1) at (0,0.5) {1};
+  \node[state] (A2) at (1,0.5) {2};
+  \node[state] (A3) at (.5,1.5) {3};
+
+  \path (A2) edge [bend left] node[fill=white,below=.1cm]
+  {}
+  (A1)
+  (A1) edge [bend left] (A3)
+  (A3) edge [bend left] (A2);
+
+  \tikzstyle{every node}=[fill=blue!80!black]
+  \foreach \angle/\text in {234/6, 162/7, 90/8, 18/9, -54/10} {
+    \node[fill=lightgray,state,xshift=5cm,yshift=3.5cm]     (\text)    at
+    (\angle:1cm) {\text};
+  }
+  \path (7) edge (10)
+  (6) edge (9);
+  \foreach \from/\to in {6/7,7/8,9/10,10/6}{
+    \path (\from) edge [bend left] (\to);
+  }
+
+  \path    (8)    edge     [bend    left]    node[fill=white]
+  {}  (9) ;
+  
+  \tikzstyle{every node}=[fill=lightgray]
+  % troisieme cluster
+  \node[state] (C1) at (3,-.5) {4};
+  \node[state] (C2) at (4,0) {5};
+
+  \path (C1) edge [bend right] (C2);
+
+  % inter cluster
+  \path (A3) edge [bend right]  (7)
+  (A3)    edge    [bend    left]    node[fill=white]
+  {}
+  (8)
+  (C2) edge [bend right] node[fill=white,right]
+  {}
+  (9)
+  (A2) edge [bend right] node[fill=white]
+  {}
+  (C1);
+\end{tikzpicture}
+``` 
+]
+.pull-right[
+<small>
+.content-box-purple[
+- *Fixed* nodes $\{1, \dots, n \}$
+- latent colors $\mathcal{C}=\{\color{#fab20a}{\bullet},\color{#0000ff}{\bullet},\color{#008000}{\bullet}\}$
+</small>
+]
+]
+]
+
+.pull-right[
+.content-box-red[Estimate the model parameters and the clustering:
+- $\theta = \{\boldsymbol\alpha = (\alpha_\bullet), \boldsymbol\Pi = (\pi_{\color{#fab20a}{\bullet}\color{#0000ff}{\bullet}})\}$
+- Colors of $i$, i.e. the $\mathbf{Z}_i$
+]
+]
+  
+.large[Marginal likelihood]
+
+Integration over $\mathcal{Z}$ is intractable: $\mathrm{card}(Q)^n$ terms!
+
+$$p_\theta(\mathbf{Y}_i) = \int_{\mathcal{Z}} \prod_{(i,j)} p_\theta(Y_{ij} | Z_i, Z_j ) \, p_\theta(\mathbf{Z}) \mathrm{d}\mathbf{Z}$$
+
+.large[Maximum likelihood for incomplete data model: EM]
+
+$$\log p_\theta(\mathbf{Y}) = \mathbb{E}_{p_\theta(\mathbf{Z}\,|\,\mathbf{Y})} [\log p_\theta(\mathbf{Y}, \mathbf{Z})] + \mathcal{H}[p_\theta(\mathbf{Z}\,|\,\mathbf{Y})], \quad \text{ with } \mathcal{H}(p) = -\mathbb{E}_p(\log(p))$$ 
+
+.important[EM requires to evaluate (some moments of)] $p_\theta(\mathbf{Z}\,|\,\mathbf{Y})$
+
+
+---
+
+# Intractable EM: solution(s)
+
+.large[Variants of EM, MCMC/Bayesian approaches]
+
+<small>
+
+```{r, ref-sbm-inference, results='asis', echo=FALSE}
+cat("- "); print(myBib["Nowicki2001"])
+cat("- "); print(myBib["daudin2008mixture"])
+cat("- "); print(myBib["latouche2012variational"])
+cat("- "); print(myBib["peixoto2014efficient"])
+```
+
+</small>
+
+.large[Variational approach]
+
+Find a proxy $q_\psi(\mathbf{Z}) \approx p_\theta(\mathbf{Z} | \mathbf{Y})$ picked in a convenient class of distribution $\mathcal{Q}$
+
+$$q(\mathbf{Z})^\star  \arg\min_{q\in\mathcal{Q}} D\left(q(\mathbf{Z}), p(\mathbf{Z} | \mathbf{Y})\right).$$
+Küllback-Leibler  is a popular choice .small[(error averaged wrt the approximated distribution)]
+
+$$KL\left(q(\mathbf{Z}), p(\mathbf{Z} | \mathbf{Y})\right) = \mathbb{E}_q\left[\log \frac{q(z)}{p(z)}\right] = \int_{\mathcal{Z}} q(z) \log \frac{q(z)}{p(z)} \mathrm{d}z.$$
+
+
+
+---
+# Variational EM for SBM
+
+## Class of distribution: multinomial
+
+$$\mathcal{Q} = \Big\{q_\psi: \, q_\psi(\mathbf{Z}) = \prod_i q_{\psi_i}(\mathbf{Z}_i), \, q_{\psi_i}(\mathbf{Z}_i) = \mathcal{M}\left(\mathbf{Z}_i; \boldsymbol\tau_i\right), \, \psi_i = \{\boldsymbol{\tau}_i\}, \boldsymbol{\tau}_i \in  \mathbb{R}^{K} \Big\}$$
+
+Maximize the ELBO (Evidence Lower BOund):
+
+$$J(\theta, \psi) = \log p_\theta(\mathbf{Y}) - KL[q_\psi (\mathbf{Z}) ||  p_\theta(\mathbf{Z} | \mathbf{Y})]  = \mathbb{E}_{q} [\log p_\theta(\mathbf{Y}, \mathbf{Z})] + \mathcal{H}[q_\psi(\mathbf{Z})]$$
+
+## Variational EM
+
+  - Initialization: get $\mathbf{T}^0 = \{\tau_{ik}^0\}$ with Absolute Spectral Clustering
+
+  - M step: update $\theta^h = \{ \boldsymbol\alpha^h, \boldsymbol\Pi^h\}$
+
+  - VE step: find the optimal $q_\psi$, by updating $\psi^h= (\psi^h_{i})_i = \mathbf{T}^{h} = \mathbb{E}_{q^{h}} (\mathbf{Z})$:
+
+$$\psi^h = \arg \max J(\theta^h, \psi) = \arg\min_{\psi} KL[q_\psi(\mathbf{Z}) \,||\, p_{\theta^h}(\mathbf{Z}\,|\,\mathbf{Y})]$$
+
+$$\theta^h = \arg\max J(\theta, \psi^h) = \arg\max_{\theta} \mathbb{E}_{q_{\psi^h}} [\log p_{\theta}(\mathbf{Y}, \mathbf{Z})]$$
+
+---
+
+# Variational EM for SBM: ingredients
+
+### Variational bound
+
+
+$$J(\theta, \tau ; \mathbf{Y}) = \sum_{(i,j)} \sum_{(k,\ell)} \tau_{ik} \tau_{j\ell} \log b(Y_{ij},\pi_{k\ell }) + \sum_{i} \sum_{k} \tau _{ik} \log (\alpha_k/\tau_{ik})$$
+
+
+### M-step (Analytical)
+
+
+$$\alpha_k = \frac{1}{n} \sum_{i} \tau_{i k} , \quad  \pi_{k\ell } = \frac{\sum_{(i,j)} \tau_{ik}\tau_{j\ell} Y_{ij}}{\tau_{ik}\tau_{j\ell}} \qquad \left({\boldsymbol\alpha} = \mathbf{1}_n^\top\mathbf{T}, \quad {\boldsymbol\Pi} =  \frac{\mathbf{T}^\top \mathbf{Y} \mathbf{T}}{\mathbf{T}^\top  \mathbf{T}} \right)$$
+
+### Variational E-step (fixed point)
+
+
+$$\tau_{ik} \varpropto \alpha_k \prod_{(i,j)} \prod_{\ell} b(Y_{ij} ; \pi_{k\ell})^{\tau_{j\ell}}$$
+
+### Model Selection
+
+$$\mathrm{vICL}(K) = \mathbb{E}_{q} [\log L(\hat{\theta)}; \mathbf{Y}, \mathbf{Z}] - \frac{1}{2} \left(\frac{K(K+1)}{2} \log \frac{n(n-1)}{2} + (K-1) \log (n) \right)$$
+
+
+---
+
+# Example: French politcal blogosphere
+
+```{r fblog-simpleSbm-analysis, cache = TRUE}
+blog  <- as_adj(frenchblog2007, sparse = FALSE)
+blocks <- 1:18
+sbm_full <- estimateMissSBM(blog, blocks, "node")
+```
+
+---
+
+# Convergence monitoring (ELBO)
+
+```{r fblog-simpleSbm-analysis-plot1}
+plot(sbm_full, "monitoring")
+```
+
+---
+
+# Model Selection (vICL)
+
+```{r fblog-simpleSbm-analysis-plot2}
+plot(sbm_full)
+```
+
+---
+
+# Parameters
+
+```{r fblog-simpleSbm-analysis-theta}
+plot(sbm_full$bestModel, "meso")
+```
+
+---
+
+# Clustering I
+
+```{r fblog-simpleSbm-analysis-plot3}
+plot(sbm_full$bestModel, dimLabels = list(row = "blogs", col = "blogs"))
+```
+
+---
+
+# Clustering II
+
+```{r fblog-simpleSbm-analysis-plot4}
+plot(sbm_full$bestModel, "expected", dimLabels = list(row = "blogs", col = "blogs"))
+```
+
+
+---
+
+# Clustering III
+
+```{r fblog-simpleSbm-analysis-ARI}
+aricode::ARI(sbm_full$bestModel$fittedSBM$memberships, party)
+aricode::NID(sbm_full$bestModel$fittedSBM$memberships, party)
+```
+
+

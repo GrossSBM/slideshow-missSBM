@@ -1,0 +1,385 @@
+
+---
+
+# .small[Inference of an observed network (missing dyads)]
+
+.pull-left[
+<small>
+$$\left(\begin{array}{cccccccccc}
+ & 1 & \texttt{NA} & 1 & 0 & \texttt{NA} & 0 & 0 & 0 & 0 \\
+ 1 &  & 0 & 0 & 1 & 0 & 0 & 1 & \texttt{NA} & 0 \\
+  \texttt{NA} & 0 &  & \texttt{NA} & 0 & 0 & 1 & \texttt{NA} & 1 & 0 \\
+ 1 & 0 &  \texttt{NA} &  & 0 & 0 & 0 & \texttt{NA} & 1 & 0 \\
+ 0 & 1 & 0 & 0 &  & 1 & 0 & 0 & 0 & 0 \\
+  \texttt{NA} & 0 & 0 & 0 & 1 &  & 0 & \texttt{NA} & 1 & 0 \\
+ 0 & 0 & 1 & 0 & 0 & 0 &  & 0 & 0 & 0 \\
+ 0 & 1 &  \texttt{NA} &  \texttt{NA} & 0 &  \texttt{NA} & 0 &  & \texttt{NA} & 0 \\
+ 0 &  \texttt{NA} & 1 & 1 & 0 & 1 & 0 &  \texttt{NA} &  & 0 \\
+ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 
+\end{array}\right)$$
+</small>
+]
+
+.pull-right[
+.content-box-red[
+
+Dyads are observed (or not)  according to a specific sampling process which must be taken into account in the inference
+
+]
+
+.content-box-purple[
+About the sampling
+
+  - Completely random?
+  - Depends on the connectivity?
+  - Depends on hidden colors (groups)?
+
+]
+]
+
+```{r, ref-misssbm, results='asis', echo=FALSE}
+cat("- "); print(myBib["Kolaczyk2009"])
+cat("- "); print(myBib["Handcock2010"])
+cat("- "); print(myBib["frisch2020learning"])
+cat("- "); print(myBib["gaucher2021outlier"])
+```
+
+---
+
+# Missing data: general framework
+
+### Little and Rubin's framework
+
+Let 
+- $R\sim p_\beta$ be a random process defining the observation (sampling) process 
+- $Y\sim p_\theta$ be some data split into two subsets $Y^m, Y^o$ ("observed" and "missing")
+ 
+`r RefManageR::Citet(myBib, "little2014statistical")`' define
+
+  -  **MCAR** (Missing Completely At Random): $R \perp Y$
+
+  -  **MAR** (Missing At Random): : $R \perp Y^m | Y^o$
+
+  -  **MNAR** (Missing Not At Random): other cases
+
+Note that MCAR $\subset$ MAR and that in MAR case, inference of $\theta$ can be done of $Y^o$ only:
+
+$$\begin{aligned}p_{\theta, \beta}(Y^o,R) & = \int  p_{\theta}(Y^o,Y^m)p_{\psi}(R|Y^o,Y^m)dY^m \\ & = p_{\theta}(Y^o)p_{\beta}(R|Y^o)\end{aligned}$$
+
+---
+
+# Missing data: SBM case
+
+.large[Setting]
+
+- The observation process is given by the sampling matrix $$(R_{ij})= \mathbf{1}_{\{Y_{ij} \text{ is observed}\} }$$
+
+- The process is **MAR**  if $R \perp Y^m, Z | Y^o$, in which case
+
+$$p_{\theta, \beta}(Y^o,R) = \int  p_{\theta}(Y^o,Y^m, Z)p_{\beta}(R|Y^o,Y^m, Z)dY^m dZ^m  = p_{\theta}(Y^o)p_{\beta}(R|Y^o)$$
+
+.large[Typology of observation processes]
+
+```{tikz dags, fig.ext = 'png', cache=TRUE, echo = FALSE}
+\usetikzlibrary{calc,shapes,backgrounds,arrows,automata,shadows,positioning}
+\definecolor{myblue}{HTML}{FAB20A}
+  \begin{tikzpicture}[scale=.5]
+    \tikzstyle{every edge}=[-,>=stealth',shorten >=1pt,auto,thin,draw]
+    \tikzstyle{every state}=[fill=myblue, draw=none,text=white, font=\normalsize, transform shape]
+
+    \node[state] (Z1) at (0,0) {Z};
+    \node[state] (Y1) at (2,0) {Y};
+    \node[state] (R1) at (4,0) {R};
+    \draw[->,>=latex] (Z1) -- (Y1);
+    \node [below of = Y1, node distance=1em] (label4) {\tiny\sf MCAR };
+
+    \node[state] (Z2) at (8,0) {Z};
+    \node[state] (Y2) at (10,0) {Y};
+    \node[state] (R2) at (12,0) {R};
+    \draw[->,>=latex] (Z2) -- (Y2);
+    \draw[->,>=latex] (Y2) -- (R2);
+    \node [below of = Y2, node distance=1em] (label2) {\tiny\sf MAR or MNAR };
+
+    \node[state] (Z3) at (0,-2) {Z};
+    \node[state] (Y3) at (2,-2) {Y};
+    \node[state] (R3) at (4,-2) {R};
+    \draw[->,>=latex] (Z3) -- (Y3);
+    \draw[->,>=latex] (Y3) -- (R3);
+    \draw[->,>=latex] (Z3) to[bend left] (R3);
+    \node [below of = Y3, node distance=1em] (label3) {\tiny\sf MNAR };
+      
+    \node[state] (Z4) at (10,-2) {Z};
+    \node[state] (Y4) at (8, -2) {Y};
+    \node[state] (R4) at (12,-2) {R};
+    \node [below of = Z4, node distance=1em] (label4) {\tiny\sf MNAR };
+    \draw[->,>=latex] (Z4) -- (Y4);
+    \draw[->,>=latex] (Z4) -- (R4);
+  \end{tikzpicture}
+```
+
+---
+
+# Observation process .small[(a.k.a "sampling design")]
+
+### Some studied processes
+
+*Notation*: .mar[M(C)AR], .mnar[MNAR], $S_i = \mathbf{1}_{\{\text{node i is sampled}\}}$ (i.e., $R_{ij} = 1$ for all $j$)
+
+.pull-left[
+
+### Dyad-centered
+
+ - .mar[Random dyad sampling]
+
+$$R_{ij} \sim^{iid} \mathcal{B}(\rho)$$
+  - .mnar[Double standard sampling]
+  
+$$\begin{aligned}R_{ij} | Y_{ij}=1 & \sim^{ind} \mathcal{B}(\rho_1) \\
+R_{ij} | Y_{ij} = 0 & \sim^{ind} \mathcal{B}(\rho_0)\end{aligned}$$
+
+  - .mnar[Block dyad sampling]
+  
+$$R_{ij}|Z_i, Z_j \sim^{ind} \mathcal{B}(\rho_{Z_i Z_j})$$
+]
+
+.pull-right[
+
+### Node-centered
+
+ - .mar[Node sampling]
+
+$$ S_{i} \sim^{iid} \mathcal{B}(\rho)$$
+  - .mnar[Degree sampling],
+
+$$\begin{aligned} S_{i}|D_i & \sim^{ind} \mathcal{B}(\mathrm{logistic}(a + b D_i)) \\
+D_i & = \sum_j Y_{ij}\end{aligned}$$
+
+  - .mnar[Block node sampling]
+
+$$S_{i}|Z_i \sim^{ind} \mathcal{B}(\rho_{Z_i})$$
+]
+
+---
+
+# Observation proces: .small[illustration]
+
+We first generate a community-shape network
+
+<small>
+```{r, fig.dim=c(4,4)}
+## SBM parameters
+N <- 300 # number of nodes
+K <- 3   # number of clusters
+alpha <- rep(1,K)/K     # block proportion
+pi    <- list(mean = diag(.45,K) + .05 ) # connectivity matrix
+## simulate an undirected binary SBM
+sbm <- sbm::sampleSimpleSBM(N, alpha, pi)
+plot(sbm)
+```
+</small>
+
+---
+
+# Observation process: .small[sample network data]
+
+We consider some sampling designs and their associated parameters
+
+```{r}
+sampling_parameters <- list(
+   "dyad" = .3,
+   "node" = .3,
+   "double-standard" = c(0.2, 0.6),
+   "block-node" = c(.3, .8, .5),
+   "block-dyad" = pi$mean,
+   "degree" = c(.1, .2)
+ )
+
+observed_networks <- list()
+
+for (sampling in names(sampling_parameters)) {
+  observed_networks[[sampling]] <-
+     missSBM::observeNetwork(
+       adjacencyMatrix = sbm$networkData,
+       sampling        = sampling,
+       parameters      = sampling_parameters[[sampling]],
+       cluster         = sbm$memberships
+     )
+}
+```
+
+---
+
+# Observation process: output
+
+```{r plot-samplings1, echo = FALSE, cache = TRUE, fig.dim = c(15, 5)}
+o <- order(sbm$memberships)
+par(mfrow = c(1,3))
+for (sampling in names(sampling_parameters)) {
+  A <- observed_networks[[sampling]]
+  corrplot::corrplot(A[o,o], is.corr=FALSE, tl.pos = "n", cl.pos = "n", method = "color", diag = FALSE, type = "upper", na.label.col =  "grey", title = paste("\n", sampling, " sampling"), mar = c(0,0,0,0))
+}
+par(mfrow = c(1,1))
+```
+
+---
+
+# Identifiability
+
+We build on the proof of `r RefManageR::Cite(myBib, "celisse2012consistency")`  for Indentifiability of the SBM (sort marginal probabilities into a Vandermonde matrix which is invertible, so that we can express parameters $\pi, \alpha$ as a function of the original probailities).
+
+### .content-box-red[SBM observed under MAR samplings (node/dyad centered)]
+
+.content-box-yellow[
+
+Let $n\geq 2K$ and assume that for any $1\leq k \leq K$, $\rho>0$, $\alpha_k >0$ and the coordinates of $\pi . \alpha$ are pairwise distinct.  Then, under dyad (resp. node) sampling, SBM parameters are identifiable w.r.t. the distribution of the observed part of the SBM up to label switching.
+
+]
+
+### .content-box-red[SBM observed under block sampling]
+
+.content-box-yellow[
+
+Let $n\geq 2K$ and assume that for any $1\leq k \leq K$, $\rho_k>0$, $\alpha_k >0$ and the coordinates of $\pi . \alpha$ are pairwise distinct. If the coordinates $( \sum_k \pi_{1k} \rho_k \alpha_k, \dots, \sum_k \pi_{Kk} \rho_k \alpha_k)$ are pairwise distinct, under block sampling, $\theta$ and $\beta$ are identifiable w.r.t. the distributions of the SBM and the sampling up to label switching.
+]
+
+Identifiability of SBM under double-standard and degree samplings: still open.
+
+---
+
+# .small[Inference of SBM from an observed network: .mar[MAR]]
+
+### Setting
+
+We now need to estimate 
+
+- The SBM parameters $\theta = \{(\boldsymbol\alpha, \boldsymbol\Pi)\}$
+- The sampling parameters $\beta$ (e.g., $\rho$, or $\rho_k$, etc. depending on the design).
+
+### MAR case
+
+Since $$p_{\theta, \beta}(Y^o,R) = p_{\theta}(Y^o)p_{\beta}(R|Y^o),$$ 
+
+we just have to .color-box-red[perform inference on the observed part of the data]
+
+$\rightsquigarrow$ "usual" V-EM (with possibility of saving memory footprint par sparsely encoding both $0$ and $\texttt{NA}$).
+
+---
+
+# .small[Inference of SBM from an observed network: .mnar[MNAR]]
+
+### Variational approximation
+
+To evaluate $\mathbb{E}_{Z, Y^m | Y^o, R}\big(\cdot\big)$,  the distribution $p_{\theta, \psi}(Z, Y^m | Y^o, R)$ is approximated by
+
+$$\begin{aligned}
+q_\psi(Z, Y^m) = \prod_{i=1}^{n} m(Z_i;\tau_{i}) \prod_{Y_{ij} \in Y_{ij}^m} b(Y_{ij};\nu_{ij}) =  \prod_{i=1}^n\prod_{k=1}^K (\tau_{ik})^{\mathbf{1}_{\{Z_i = k\}}} \cdot \prod_{Y_{ij} \in Y_{ij}^m} \nu_{ij}^{Y_{ij}}(1-\nu_{ij})^{1-Y_{ij}}  \end{aligned}$$
+
+where  $\psi = \{(\nu_{ij}), (\tau_{ik})\}$ are the variational parameters to be optimized
+- $\tau_{ik}$ the posterior probabilities, are (almost) generic to any sampling design
+- $\nu_{ij}$, the imputation values, are specific to the sampling design.
+
+
+### M-step
+
+- $\beta$, the sampling parameters, are specific to the design
+- $\theta = (\boldsymbol\alpha, \boldsymbol\pi)$ are generic:
+
+$$\hat{\alpha}_k=\frac{1}{n}\sum_i \hat{\tau}_{ik}, \qquad \hat{\pi}_{k\ell}=\frac{\sum_{(i,j)\in Y^o_{ij}}\hat{\tau}_{iq}\hat{\tau}_{j\ell}Y_{ij} +
+\sum_{(i,j)\in Y_{ij}^m}\hat{\tau}_{iq}\hat{\tau}_{j\ell}\hat{\nu}_{ij}}{\sum_{(i,j)}\hat{\tau}_{iq}\hat{\tau}_{j\ell}}.$$
+
+---
+
+# .small[General Variational EM for MNAR inference]
+
+Essentially separate computations for fitting the SBM / the sampling design
+
+.content-box-yellow[
+**Initialize** $\tau^{0}$, $\nu^{0}$ and $\beta^{0}$ 
+
+**Repeat**
+
+$$\begin{array}{lclrr}
+\theta^{(h+1)} & = & \arg\max_{\theta} J\left(Y^o,R ;\ \tau^{h},\nu^{h},\beta^{h},\theta \right) & \text{M-step a)} & \text{SBM} \\
+\beta^{h+1} & = & \arg\max_{\beta} J\left(Y^o,R; \ \tau^{h},\nu^{h},\beta,\theta^{h+1} \right) & \text{M-step b)} & \text{Sampling} \\
+\tau^{h+1} & = & \arg\max_{\tau} J\left(Y^o,R; \ \tau,\nu^{h},\beta^{h+1}, \theta^{h+1} \right) & \text{VE-step  a)} & \text{SBM} \\
+\nu^{h+1} & = & \arg\max_{\nu} J\left(Y^o,R ; \tau^{h+1},\nu,\beta^{h+1},\theta^{h+1} \right) & \text{VE-step b)} & \text{Sampling} \\
+\end{array}$$
+
+**Until** $\left\|\theta^{h+1} - \theta^{h}\right\| < \varepsilon$
+]
+
+where we have the following decomposition:
+
+$$\begin{aligned}
+J(Y^o,R) & = \mathbb{E}_{q_{\psi}} [\log p_{\theta,\beta}(Y^o, R, Y^m, Z)] + \mathcal{H}(q_{\psi}(Z, Y^m))\\
+& = \mathbb{E}_{q_{\psi}} [\log p_{\beta}(R | Y^o, Y^m, Z)] + \mathbb{E}_{q_{\tau}} [\log p_{\theta}(Y^o | Z)] + \mathbb{E}_{q_{\nu,\tau}} [\log p_{\theta}(Y^m | Z)] \\
+& \qquad \qquad + \mathcal{H}(q_{\tau}(Z)) + \mathcal{H}(q_{\nu}(Y^m)) \end{aligned}$$
+
+---
+
+# Design specific updates
+
+### Example for Block-dyad sampling
+
+Recall that 
+
+$$R_{ij}|Z_i, Z_j \sim^{ind} \mathcal{B}(\rho_{Z_i Z_j})$$
+
+Then, the expected log-likelihood w.r.t the variational approximation $q$ is
+
+$$\mathbb{E}_{q_{\psi}} [\log p_{\beta}(R | Y^o, Y^m, Z)] = \sum_{(i,j) \in Y^o}
+  \sum_{k,\ell} \tau_{ik}\tau_{j\ell} \log(\rho_{k\ell}) + \sum_{(i,j)\in Y^m}
+  \sum_{k,\ell} \tau_{ik}\tau_{j\ell} \log(\rho_{k\ell}),$$
+
+From which we derive
+
+$$\hat{\rho}_{k\ell}=\frac{\sum_{(i,j)\in Y^o} \tau_{ik}\tau_{j\ell} }{\sum_{(i,j)\in Y} \tau_{ik}\tau_{j\ell} }\,$$  
+  
+and
+
+$$\hat{\nu}_{ij} = \mathrm{logistic} \left( \sum_{k,\ell} \tau_{ik}\tau_{j\ell} \log\left(\frac{\pi_{k\ell}}{1-\pi_{k\ell}}\right) \right)$$
+
+---
+
+# Variational Estimators: .small[theoretical guarantees]
+
+### Consistency & Asymptotic Normality
+
+Inspired by the two following papers: 
+
+- `r RefManageR::Cite(myBib, 'bickel2013asymptotic')` deal with binary SBM under "sparse" conditions
+- `r RefManageR::Cite(myBib, 'brault2017')` deal with LBM with distribution in the one-dimensional exponential family fully observed
+
+### .content-box-red[Theorem `r RefManageR::Cite(myBib, 'mariadassou2020consistency')`]
+
+.content-box-yellow[
+Consider an SBM with $K$ blocks and distribution in the *one-dimensional exponential family* under *random dyad sampling* and identifiability conditions (already explicited). 
+
+Then, maximum likelihood and variational estimators are *consistent* and *asymptotically normal* with explicit asymptotic variance/covariance matrix. 
+]
+
+$\rightarrow$ Only for MAR sampling !
+
+
+---
+
+# SBM with covariates and missing data
+
+Consider $m$ external covariates $X_{ij}\in\mathbb{R}^m$ defined at the edge level. For covariates at the node level $X_i$, we can define a similarity $\phi(X_i, X_j) \to X_{ij}$.
+
+$$\begin{aligned}
+Z_i & \sim^{\text{iid}} \mathcal{M}(1,\alpha), \\ 
+Y_{ij} \ | \ \{Z_i, Z_j, X_{ij} \} & \sim^{\text{ind}} \mathcal{B}(\text{logistic}(\pi_{Z_i Z_j} + \eta^\top X_{ij}))\\
+\end{aligned}$$
+
+### Dyad-centered sampling
+
+Let $\delta \in \mathbb{R}$, $\kappa \in \mathbb{R}^m$. The probability to observe a dyad is
+$$\mathbb{P}(R_{ij} = 1 |X_{ij}) = \text{logistic}(\delta + \kappa^T X_{ij}).$$
+
+### Node-centered sampling 
+
+Let $\delta \in \mathbb{R}$ and $\kappa \in \mathbb{R}^n$. The probability to observe all dyads corresponding to a node is
+$$\mathbb{P}(S_{i} = 1 |X_{i}) = \text{logistic}(\delta + \kappa^T X_i).$$
+
+.content-box-red[These sampling designs are NMAR, however, conditionally to $X$ they are MCAR]

@@ -1,0 +1,100 @@
+
+---
+
+# Back to French blogosphere
+
+### Control the network observation
+
+  - We sample in the original network to get a partly observed blog network
+  - We sampled more in the highly connected communities.
+
+```{r blog-sample}
+samplingParameters <- 
+  .2 + ifelse(sbm_full$bestModel$fittedSBM$connectParam$mean < .1, 0, .6)
+blog_obs <-
+  observeNetwork(
+    adjacencyMatrix = blog,
+    sampling        = "block-dyad",
+    parameters      = samplingParameters,
+    clusters        = sbm_full$bestModel$fittedSBM$memberships
+  )
+```
+
+---
+
+# French blogosphere sampled
+
+```{r, echo = FALSE, cache = TRUE, fig.dim = c(15, 10)}
+o <- order(party)
+par(mfrow = c(1,2))
+corrplot::corrplot(blog[o,o], is.corr=FALSE, tl.pos = "n", cl.pos = "n", method = "color", diag = FALSE, type = "upper", na.label.col =  "grey", title = "\n Original", mar = c(0,0,0,0))
+corrplot::corrplot(blog_obs[o,o], is.corr=FALSE, tl.pos = "n", cl.pos = "n", method = "color", diag = FALSE, type = "upper", na.label.col =  "grey", title = "\n Sampled", mar = c(0,0,0,0))
+par(mfrow = c(1,2))
+
+```
+
+---
+
+# .small[Compare MAR and NMAR with model selection criterion]
+
+```{r fblog-mar-nmar-fake, eval = FALSE}
+sbm_mar  <- estimateMissSBM(blog_obs, blocks, "dyad")
+sbm_mnar <- estimateMissSBM(blog_obs, blocks, "block-dyad")
+```
+
+```{r fblog-mar-nmar, cache = TRUE, results='hide', echo = FALSE}
+sbm_mar  <- estimateMissSBM(blog_obs, blocks, "dyad", control = list(iterates = 3))
+sbm_mnar <- estimateMissSBM(blog_obs, blocks, "block-dyad", control = list(iterates = 3))
+```
+
+
+```{r plotICL-fblog, echo = FALSE, fig.dim=c(8, 6)}
+# compare the models via ICL
+rbind(
+  tibble(Q = blocks, ICL = sbm_mar$ICL , sampling ="MCAR"),
+  tibble(Q = blocks, ICL = sbm_mnar$ICL, sampling = "MNAR")
+) %>% ggplot(aes(x = Q, y = ICL, color = sampling)) + 
+  geom_line() + geom_point() + ggtitle("Model Selection") +
+  labs(x = "# blocks", y = "Integrated Classification Likelihood") + theme_bw()
+```
+
+---
+
+# Validation?
+
+Compare the clustering of the different models with the original *party* classification:
+
+<small>
+```{r ari-fblog}
+ARI(party, sbm_full$bestModel$fittedSBM$memberships)
+ARI(party, sbm_mar$bestModel$fittedSBM$memberships)
+ARI(party, sbm_mnar$bestModel$fittedSBM$memberships)
+ARI(sbm_mnar$bestModel$fittedSBM$memberships, sbm_full$bestModel$fittedSBM$memberships)
+ARI(sbm_mnar$bestModel$fittedSBM$memberships, sbm_mar$bestModel$fittedSBM$memberships)
+```
+</small>
+
+---
+
+# French blogosphere: .small[original classification]
+
+```{r, echo = FALSE}
+sbm::plotMyMatrix(blog, dimLabels = list('blog', "blog ordered per party"), clustering = list(row = party))
+```
+
+---
+
+# French blogosphere: .small[MAR clustering]
+
+```{r, echo = FALSE}
+plot(sbm_mar$bestModel, dimLabels = list(row = "blog", col = "blog order by MAR clustering"))
+```
+
+---
+
+# French blogosphere: .small[MNAR clustering]
+
+```{r, echo = FALSE}
+plot(sbm_mnar$bestModel, dimLabels = list(row = "blog", col = "blog order by MNAR clustering"))
+```
+

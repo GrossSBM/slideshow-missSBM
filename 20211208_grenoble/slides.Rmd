@@ -1,0 +1,252 @@
+---
+title: "missSBM"
+subtitle: "Inference in Stochastic Block Models from Missing Data"
+author: " P. Barbillon, J. Chiquet, T. Tabouy<br /><br /> <small>Paris-Saclay, AgroParisTech, INRAE</small> <br /> <small>Last update `r format(Sys.time(), '%d %B, %Y')`</small>"
+date: "<br/>https://github.com/GrossSBM/missSBM"
+output:
+  xaringan::moon_reader:
+    chakra: libs/remark-latest.min.js
+    css: ["my_pres.css", default, metropolis, metropolis-fonts]
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(fig.align='center')
+library(tidyverse) # data manipulation
+library(corrplot)  # plot of covariance/correlation matrices
+library(ggraph)
+library(igraph)
+library(RColorBrewer)
+library(aricode)
+
+fancy_network <- function(mygraph, group) {
+
+  V(mygraph)$party  <- as.character(group)
+  V(mygraph)$degree <- degree(mygraph)
+
+  angle <- 90 - 360 * 1:igraph::gorder(mygraph) / igraph::gorder(mygraph)
+  V(mygraph)$hjust <- ifelse(angle < -90, 1, 0)
+  V(mygraph)$angle <- ifelse(angle < -90, angle + 180, angle)
+  
+  p <- ggraph(mygraph, layout = 'linear', circular = TRUE) + 
+    geom_edge_arc(alpha = 0.25, show.legend = FALSE) +
+#    geom_node_text(aes(label = party, x = x*1.05, y=y*1.05, angle = angle, hjust = hjust), size = 3) +
+    geom_node_point(aes(colour = party, size = degree), alpha = 0.5) +
+    scale_colour_manual(values = c(brewer.pal(6,"Paired"),"maroon4","springgreen", "tan4","plum","brown4","burlywood",brewer.pal(8, "Dark2"), "navy")) +
+    theme_graph(base_size = 20)
+  
+  invisible(p)
+}
+```
+
+```{r, load_refs, echo=FALSE, cache=FALSE, message=FALSE, warning=FALSE}
+library(RefManageR)
+BibOptions(check.entries = FALSE, 
+           bib.style = "authoryear", 
+           cite.style = 'alphabetic', 
+           style = "markdown",
+           hyperlink = FALSE, 
+           dashed = FALSE)
+myBib <- ReadBib("./missSBM.bib", check = FALSE)
+```
+
+# Resources
+
+### R/C++ package
+
+Last stable release on CRAN, development version available on GitHub.
+
+```{r install, eval=FALSE, tidy=FALSE}
+install.packages("missSBM")
+remotes::install_github("GrossSBM/missSBM@development")
+```
+
+```{r loading package, message=FALSE}
+library(missSBM)
+packageVersion("missSBM")
+```
+
+```{r future, echo = FALSE}
+options(future.fork.enable = TRUE)
+future::plan("multicore", workers = parallel::detectCores())
+```
+
+### Publications
+
+<small>
+
+The [missSBM website](https://grosssbm.github.io/missSBM/) contains the standard package documentation and a couple of vignettes for the top-level functions.
+
+```{r, results='hide', echo = FALSE}
+RefManageR::Cite(myBib, 'Tabouy2019')
+RefManageR::Cite(myBib, 'misssbm')
+```
+
+```{r, 'refs', results='asis', echo=FALSE}
+cat("- "); print(myBib["Tabouy2019"])
+cat("- "); print(myBib["misssbm"])
+```
+
+</small>
+
+
+---
+
+class: inverse, middle
+
+# Outline 
+
+  1. .large[Motivations]
+  2. .large[Binary SBM and variational Inference]
+  3. .large[SBM inference from observed data]
+  4. .large[Illustration]
+
+---
+
+# Network data with missing entries
+
+### Recommandation system: Epinion 
+
+
+English (US) 
+Farmers only provide information about other farmers with whom they have interacted.
+
+Who-trust-whom online social network of a general consumer review site Epinions.com. Members of the site can decide whether to ''trust'' each other. 
+
+**Available** at http://www.trustlet.org/datasets/extended_epinions/user_rating.txt.gz
+
+### Social networks in ethnobiology
+
+A seed exchange network in Kenya is collected on a limited space area, where all the 155 farmers are interviewed. Farmers only provide information about other farmers with whom they have interacted.
+
+### Ecological networks: plant-pollinator nbetwork
+
+Interaction network between predefined sets of plants and pollonitor, by direct observation. How can trust the "0" in network data collected not to be a missing entry? 
+
+---
+
+# .small[Companion data set: French political Blogosphere]
+
+Single day snapshot of almost 200 political blogs automatically extracted the 14 October 2006 and manually classified by the "Observatoire Présidentielle" project.
+
+
+```{r, eval=FALSE}
+data("frenchblog2007")
+party <- vertex.attributes(frenchblog2007)$party
+table(party) %>% kableExtra::kbl() %>% kableExtra::kable_classic()
+```
+
+
+```{r, echo = FALSE}
+data("frenchblog2007")
+frenchblog2007 <- delete_vertices(frenchblog2007, which(degree(frenchblog2007) == 0))
+party <- vertex.attributes(frenchblog2007)$party
+table(party) %>% kableExtra::kbl() %>% kableExtra::kable_classic()
+```
+
+---
+
+# French blog: graph view
+
+```{r blog-graph, cache = TRUE, echo = FALSE, fig.align='center', fig.dim=c(9,7), out.width='95%'}
+print(fancy_network(frenchblog2007, party))
+```
+
+---
+
+# French blog: matrix view
+
+```{r blog-matrix, cache = TRUE, echo = FALSE, fig.align='center', fig.dim=c(7,7), out.width='70%'}
+blog  <- as_adj(frenchblog2007, sparse = FALSE)
+sbm::plotMyMatrix(blog, dimLabels = list('blog', "blog ordered per party"), clustering = list(row = party))
+```
+
+---
+
+class: inverse, middle
+
+# SBM: background
+
+  - Probabilistic model for random graph
+  - Latent variable model
+  - Variational Inference
+
+<!-- SBM: background -->
+```{r SBM_background, child='sbm.Rmd'}
+```
+
+---
+
+class: inverse, middle
+
+# SBM from an observed network
+
+  - Missing data framework for SBM
+  - Modeling the observation process
+  - Inference with missing dyads
+
+<!-- MISS-SBM -->
+```{r missSBM, child='missSBM.Rmd'}
+```
+
+---
+
+class: inverse, middle
+
+# Illustrations
+
+  1. Numerical study of MNAR vs MAR
+  2. French blogosphere
+  3. PPI ER (ESR1) ego network
+
+<!-- Illustration MNAR -->
+```{r MNAR, child='simus.Rmd'}
+```
+
+<!-- Illustration blogosphere -->
+```{r blog, child='fblog.Rmd'}
+```
+
+<!-- PPI-network -->
+```{r blog, child='ppi-network.Rmd'}
+```
+
+
+```{r future off, echo=FALSE}
+future::plan("sequential")
+```
+
+---
+# Conclusion
+
+## Perspectives/ongoing
+
+- Sampling
+  - study robustness (block-sampling "includes" double-standard?)
+- Other models
+  - degree-corrected SBM
+  - (ZI)-Poisson emission law
+  - Simple SBM $\to$ Bipartite SBM (aka Latent block models)
+- Other algorithms
+  - SGD algorithms + Pytorch framework
+  - 'Exact' ICL maximization (with É. Côme)
+
+
+## Advertisement
+
+[https://computo.sfds.asso.fr](https://computo.sfds.asso.fr), a new journal promoting reproducible research
+
+## THANK YOU
+
+---
+# References
+
+```{r, 'print_refs', results='asis', echo=FALSE}
+PrintBibliography(myBib)
+```
+
